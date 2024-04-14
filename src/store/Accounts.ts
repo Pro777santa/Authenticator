@@ -5,6 +5,7 @@ import { OTPType, OTPAlgorithm } from "../models/otp";
 import { ActionContext } from "vuex";
 import { getSiteName, getMatchedEntriesHash } from "../utils";
 import { isChromium } from "../browser";
+import { StorageLocation, UserSettings } from "../models/settings";
 
 export class Accounts implements Module {
   async getModule() {
@@ -16,6 +17,7 @@ export class Accounts implements Module {
     const LocalStorage: {
       [key: string]: any;
     } = (await chrome.storage.local.get("LocalStorage")).LocalStorage || {};
+    const userSettings = await UserSettings.getAllItems();
 
     return {
       state: {
@@ -42,9 +44,7 @@ export class Accounts implements Module {
           getters: { matchedEntries: string[] }
         ) {
           return (
-            LocalStorage.smartFilter !== "false" &&
-            LocalStorage.smartFilter !== false &&
-            getters.matchedEntries.length
+            userSettings.smartFilter !== false && getters.matchedEntries.length
           );
         },
         matchedEntries: (state: AccountsState) => {
@@ -75,9 +75,9 @@ export class Accounts implements Module {
         },
         updateCodes(state: AccountsState) {
           let second = new Date().getSeconds();
-          if (LocalStorage.offset) {
+          if (userSettings.offset) {
             // prevent second from negative
-            second += Number(LocalStorage.offset) + 60;
+            second += Number(userSettings.offset) + 60;
           }
 
           second = second % 60;
@@ -416,7 +416,7 @@ export class Accounts implements Module {
           }
 
           // remove cached passphrase in old version
-          LocalStorage.encodedPhrase = undefined;
+          userSettings.encodedPhrase = undefined;
           chrome.storage.local.remove("encodedPhrase");
         },
         updateEntries: async (state: ActionContext<AccountsState, {}>) => {
@@ -454,8 +454,8 @@ export class Accounts implements Module {
         ) => {
           // sync => local
           if (
-            LocalStorage.storageLocation === "sync" &&
-            newStorageLocation === "local"
+            userSettings.storageLocation === StorageLocation.Sync &&
+            newStorageLocation === StorageLocation.Local
           ) {
             const syncData = await chrome.storage.sync.get();
             await chrome.storage.local.set(syncData);
@@ -467,20 +467,20 @@ export class Accounts implements Module {
                 (value) => Object.keys(localData).indexOf(value) >= 0
               )
             ) {
-              LocalStorage.storageLocation = "local";
+              userSettings.storageLocation = StorageLocation.Local;
               await chrome.storage.sync.clear();
-              await chrome.storage.local.set({ LocalStorage });
+              await chrome.storage.local.set({ UserSettings: userSettings });
               return "updateSuccess";
             } else {
               throw " All data not transferred successfully.";
             }
             // local => sync
           } else if (
-            LocalStorage.storageLocation === "local" &&
-            newStorageLocation === "sync"
+            userSettings.storageLocation === StorageLocation.Local &&
+            newStorageLocation === StorageLocation.Sync
           ) {
             const localData = await chrome.storage.local.get();
-            delete localData.LocalStorage;
+            delete localData.UserSettings;
             await chrome.storage.sync.set(localData);
             const syncData = await chrome.storage.sync.get();
 
@@ -490,9 +490,9 @@ export class Accounts implements Module {
                 (value) => Object.keys(syncData).indexOf(value) >= 0
               )
             ) {
-              LocalStorage.storageLocation = "sync";
+              userSettings.storageLocation = StorageLocation.Sync;
               await chrome.storage.local.clear();
-              await chrome.storage.local.set({ LocalStorage });
+              await chrome.storage.local.set({ UserSettings: userSettings });
               return "updateSuccess";
             } else {
               throw " All data not transferred successfully.";

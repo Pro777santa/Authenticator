@@ -1,4 +1,5 @@
 import { Permission } from "../models/permission";
+import { UserSettings } from "../models/settings";
 
 const permissions: Permission[] = [
   {
@@ -52,9 +53,8 @@ const permissions: Permission[] = [
     revocable: true,
     validation: [
       async () => {
-        const LocalStorage =
-          (await chrome.storage.local.get("LocalStorage")).LocalStorage || {};
-        if (LocalStorage.dropboxToken !== undefined) {
+        const userSettings = await UserSettings.getAllItems();
+        if (userSettings.dropboxToken !== undefined) {
           return {
             valid: false,
             message: chrome.i18n.getMessage("permission_dropbox_cannot_revoke"),
@@ -72,9 +72,8 @@ const permissions: Permission[] = [
     revocable: true,
     validation: [
       async () => {
-        const LocalStorage =
-          (await chrome.storage.local.get("LocalStorage")).LocalStorage || {};
-        if (LocalStorage.driveToken !== undefined) {
+        const userSettings = await UserSettings.getAllItems();
+        if (userSettings.driveToken !== undefined) {
           return {
             valid: false,
             message: chrome.i18n.getMessage("permission_drive_cannot_revoke"),
@@ -92,9 +91,8 @@ const permissions: Permission[] = [
     revocable: true,
     validation: [
       async () => {
-        const LocalStorage =
-          (await chrome.storage.local.get("LocalStorage")).LocalStorage || {};
-        if (LocalStorage.driveToken !== undefined) {
+        const userSettings = await UserSettings.getAllItems();
+        if (userSettings.driveToken !== undefined) {
           return {
             valid: false,
             message: chrome.i18n.getMessage("permission_drive_cannot_revoke"),
@@ -112,9 +110,8 @@ const permissions: Permission[] = [
     revocable: true,
     validation: [
       async () => {
-        const LocalStorage =
-          (await chrome.storage.local.get("LocalStorage")).LocalStorage || {};
-        if (LocalStorage.oneDriveToken !== undefined) {
+        const userSettings = await UserSettings.getAllItems();
+        if (userSettings.oneDriveToken !== undefined) {
           return {
             valid: false,
             message: chrome.i18n.getMessage(
@@ -134,9 +131,8 @@ const permissions: Permission[] = [
     revocable: true,
     validation: [
       async () => {
-        const LocalStorage =
-          (await chrome.storage.local.get("LocalStorage")).LocalStorage || {};
-        if (LocalStorage.oneDriveToken !== undefined) {
+        const userSettings = await UserSettings.getAllItems();
+        if (userSettings.oneDriveToken !== undefined) {
           return {
             valid: false,
             message: chrome.i18n.getMessage(

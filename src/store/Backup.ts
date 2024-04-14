@@ -1,21 +1,16 @@
+import { UserSettings } from "../models/settings";
+
 export class Backup implements Module {
   async getModule() {
-    const LocalStorage =
-      (await chrome.storage.local.get("LocalStorage")).LocalStorage || {};
+    const userSettings = await UserSettings.getAllItems();
     return {
       state: {
-        dropboxEncrypted:
-          LocalStorage.dropboxEncrypted === "true" ||
-          LocalStorage.dropboxEncrypted === true,
-        driveEncrypted:
-          LocalStorage.driveEncrypted === "true" ||
-          LocalStorage.driveEncrypted === true,
-        oneDriveEncrypted:
-          LocalStorage.oneDriveEncrypted === "true" ||
-          LocalStorage.oneDriveEncrypted === true,
-        dropboxToken: Boolean(LocalStorage.dropboxToken),
-        driveToken: Boolean(LocalStorage.driveToken),
-        oneDriveToken: Boolean(LocalStorage.oneDriveToken),
+        dropboxEncrypted: userSettings.dropboxEncrypted === true,
+        driveEncrypted: userSettings.driveEncrypted === true,
+        oneDriveEncrypted: userSettings.oneDriveEncrypted === true,
+        dropboxToken: Boolean(userSettings.dropboxToken),
+        driveToken: Boolean(userSettings.driveToken),
+        oneDriveToken: Boolean(userSettings.oneDriveToken),
       },
       mutations: {
         setToken(

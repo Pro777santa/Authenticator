@@ -45,6 +45,7 @@
 <script lang="ts">
 import Vue from "vue";
 import { OneDrive } from "../../models/backup";
+import { UserSettings, UserSettingsData } from "../../models/settings";
 
 const service = "onedrive";
 
@@ -52,12 +53,12 @@ export default Vue.extend({
   data: function () {
     return {
       email: this.i18n.loading,
-      LocalStorage: {} as { [key: string]: any },
+      userSettings: {} as UserSettingsData,
     };
   },
   created() {
-    chrome.storage.local.get("LocalStorage").then((res) => {
-      this.LocalStorage = res.LocalStorage || {};
+    UserSettings.getAllItems().then((res) => {
+      this.userSettings = res;
     });
   },
   computed: {
@@ -66,17 +67,17 @@ export default Vue.extend({
     },
     isEncrypted: {
       get(): boolean {
-        if (this.LocalStorage[`oneDriveEncrypted`] === null) {
+        if (this.userSettings.oneDriveEncrypted === null) {
           this.$store.commit("backup/setEnc", { service, value: true });
-          this.LocalStorage.oneDriveEncrypted = true;
-          chrome.storage.local.set({ LocalStorage: this.LocalStorage });
+          this.userSettings.oneDriveEncrypted = true;
+          UserSettings.setItems(this.userSettings);
           return true;
         }
         return this.$store.state.backup.driveEncrypted;
       },
       set(newValue: string) {
-        this.LocalStorage.driveEncrypted = newValue;
-        chrome.storage.local.set({ LocalStorage: this.LocalStorage });
+        this.userSettings.driveEncrypted = newValue === "true";
+        UserSettings.setItems(this.userSettings);
         this.$store.commit("backup/setEnc", { service, value: newValue });
       },
     },
@@ -90,14 +91,14 @@ export default Vue.extend({
       return;
     },
     getBackupToken(business?: boolean) {
-      this.LocalStorage.oneDriveBusiness = Boolean(business);
-      chrome.storage.local.set({ LocalStorage: this.LocalStorage });
+      this.userSettings.oneDriveBusiness = Boolean(business);
+      UserSettings.setItems(this.userSettings);
       chrome.runtime.sendMessage({ action: service });
     },
     async backupLogout() {
-      this.LocalStorage.oneDriveToken = undefined;
-      this.LocalStorage.oneDriveRefreshToken = undefined;
-      chrome.storage.local.set({ LocalStorage: this.LocalStorage });
+      this.userSettings.oneDriveToken = undefined;
+      this.userSettings.oneDriveRefreshToken = undefined;
+      UserSettings.setItems(this.userSettings);
       this.$store.commit("backup/setToken", { service, value: false });
       this.$store.commit("style/hideInfo");
     },
@@ -108,16 +109,12 @@ export default Vue.extend({
       );
       if (response === true) {
         this.$store.commit("notification/alert", this.i18n.updateSuccess);
-      } else if (
-        this.LocalStorage.oneDriveRevoked === "true" ||
-        this.LocalStorage.oneDriveRevoked === true
-      ) {
+      } else if (this.userSettings.oneDriveRevoked === true) {
         this.$store.commit(
           "notification/alert",
           chrome.i18n.getMessage("token_revoked", ["OneDrive"])
         );
-        this.LocalStorage.oneDriveRevoked = undefined;
-        chrome.storage.local.set({ LocalStorage: this.LocalStorage });
+        UserSettings.removeItem("oneDriveRevoked");
         this.$store.commit("backup/setToken", { service, value: false });
       } else {
         this.$store.commit("notification/alert", this.i18n.updateFailure);

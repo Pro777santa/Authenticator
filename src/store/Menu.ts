@@ -1,31 +1,19 @@
 import { isSafari } from "../browser";
+import { UserSettings } from "../models/settings";
 import { ManagedStorage } from "../models/storage";
 
 export class Menu implements Module {
   async getModule() {
-    const LocalStorage =
-      (await chrome.storage.local.get("LocalStorage")).LocalStorage || {};
+    const userSettings = await UserSettings.getAllItems();
     const menuState = {
       state: {
         version: chrome.runtime.getManifest()?.version || "0.0.0",
-        zoom: Number(LocalStorage.zoom) || 100,
-        useAutofill:
-          LocalStorage.autofill === "true" || LocalStorage.autofill === true,
-        smartFilter:
-          LocalStorage.smartFilter !== "false" &&
-          LocalStorage.smartFilter !== false,
-        enableContextMenu:
-          LocalStorage.enableContextMenu === "true" ||
-          LocalStorage.enableContextMenu === true,
-        theme:
-          LocalStorage.theme ||
-          (LocalStorage.highContrast === "true" ||
-          LocalStorage.highContrast === true
-            ? "accessibility"
-            : isSafari
-            ? "flat"
-            : "normal"),
-        autolock: Number(LocalStorage.autolock) || 0,
+        zoom: Number(userSettings.zoom) || 100,
+        useAutofill: userSettings.autofill === true,
+        smartFilter: userSettings.smartFilter !== false,
+        enableContextMenu: userSettings.enableContextMenu === true,
+        theme: userSettings.theme || (isSafari ? "flat" : "normal"),
+        autolock: Number(userSettings.autolock) || 0,
         backupDisabled: await ManagedStorage.get("disableBackup", false),
         exportDisabled: await ManagedStorage.get("disableExport", false),
         enforcePassword: await ManagedStorage.get("enforcePassword", false),
@@ -40,35 +28,34 @@ export class Menu implements Module {
       mutations: {
         setZoom: (state: MenuState, zoom: number) => {
           state.zoom = zoom;
-          LocalStorage.zoom = zoom;
-          chrome.storage.local.set({ LocalStorage });
+          userSettings.zoom = zoom;
+          UserSettings.setItems(userSettings);
           this.resize(zoom);
         },
         setAutofill(state: MenuState, useAutofill: boolean) {
           state.useAutofill = useAutofill;
-          LocalStorage.autofill = useAutofill;
-          chrome.storage.local.set({ LocalStorage });
+          userSettings.autofill = useAutofill;
+          UserSettings.setItems(userSettings);
         },
         setSmartFilter(state: MenuState, smartFilter: boolean) {
           state.smartFilter = smartFilter;
-          LocalStorage.smartFilter = smartFilter;
-          chrome.storage.local.set({ LocalStorage });
+          userSettings.smartFilter = smartFilter;
+          UserSettings.setItems(userSettings);
         },
         setEnableContextMenu(state: MenuState, enableContextMenu: boolean) {
           state.enableContextMenu = enableContextMenu;
-          LocalStorage.enableContextMenu = enableContextMenu;
-          chrome.storage.local.set({ LocalStorage });
+          userSettings.enableContextMenu = enableContextMenu;
+          UserSettings.setItems(userSettings);
         },
         setTheme(state: MenuState, theme: string) {
           state.theme = theme;
-          LocalStorage.theme = theme;
-          LocalStorage.useHighContrast = undefined;
-          chrome.storage.local.set({ LocalStorage });
+          userSettings.theme = theme;
+          UserSettings.setItems(userSettings);
         },
         setAutolock(state: MenuState, autolock: number) {
           state.autolock = autolock;
-          LocalStorage.autolock = autolock;
-          chrome.storage.local.set({ LocalStorage });
+          userSettings.autolock = autolock;
+          UserSettings.setItems(userSettings);
         },
       },
       namespaced: true,

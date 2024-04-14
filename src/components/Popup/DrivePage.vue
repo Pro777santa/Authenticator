@@ -36,6 +36,7 @@
 import Vue from "vue";
 import { isChrome } from "../../browser";
 import { Drive } from "../../models/backup";
+import { UserSettings, UserSettingsData } from "../../models/settings";
 
 const service = "drive";
 
@@ -43,12 +44,12 @@ export default Vue.extend({
   data: function () {
     return {
       email: this.i18n.loading,
-      LocalStorage: {} as { [key: string]: any },
+      userSettings: {} as UserSettingsData,
     };
   },
   created() {
-    chrome.storage.local.get("LocalStorage").then((res) => {
-      this.LocalStorage = res.LocalStorage || {};
+    UserSettings.getAllItems().then((res) => {
+      this.userSettings = res;
     });
   },
   computed: {
@@ -57,17 +58,17 @@ export default Vue.extend({
     },
     isEncrypted: {
       get(): boolean {
-        if (this.LocalStorage[`${service}Encrypted`] === null) {
+        if (this.userSettings[`${service}Encrypted`] === null) {
           this.$store.commit("backup/setEnc", { service, value: true });
-          this.LocalStorage[`${service}Encrypted`] = true;
-          chrome.storage.local.set({ LocalStorage: this.LocalStorage });
+          this.userSettings[`${service}Encrypted`] = true;
+          UserSettings.setItems(this.userSettings);
           return true;
         }
         return this.$store.state.backup.driveEncrypted;
       },
       set(newValue: string) {
-        this.LocalStorage.driveEncrypted = newValue;
-        chrome.storage.local.set({ LocalStorage: this.LocalStorage });
+        this.userSettings.driveEncrypted = newValue === "true";
+        UserSettings.setItems(this.userSettings);
         this.$store.commit("backup/setEnc", { service, value: newValue });
       },
     },
@@ -85,13 +86,13 @@ export default Vue.extend({
         xhr.open(
           "POST",
           "https://accounts.google.com/o/oauth2/revoke?token=" +
-            this.LocalStorage.driveToken
+            this.userSettings.driveToken
         );
         xhr.onreadystatechange = () => {
           if (xhr.readyState === 4) {
             if (isChrome) {
               chrome.identity.removeCachedAuthToken(
-                { token: this.LocalStorage.driveToken },
+                { token: this.userSettings.driveToken as string },
                 () => {
                   resolve(true);
                 }
@@ -104,8 +105,7 @@ export default Vue.extend({
         };
         xhr.send();
       });
-      this.LocalStorage.driveToken = undefined;
-      chrome.storage.local.set({ LocalStorage: this.LocalStorage });
+      UserSettings.removeItem("driveToken");
       this.$store.commit("backup/setToken", { service, value: false });
       this.$store.commit("style/hideInfo");
     },
@@ -116,16 +116,12 @@ export default Vue.extend({
       );
       if (response === true) {
         this.$store.commit("notification/alert", this.i18n.updateSuccess);
-      } else if (
-        this.LocalStorage.driveRevoked === "true" ||
-        this.LocalStorage.driveRevoked === true
-      ) {
+      } else if (this.userSettings.driveRevoked === true) {
         this.$store.commit(
           "notification/alert",
           chrome.i18n.getMessage("token_revoked", ["Google Drive"])
         );
-        this.LocalStorage.driveRevoked = undefined;
-        chrome.storage.local.set({ LocalStorage: this.LocalStorage });
+        UserSettings.removeItem("driveRevoked");
         this.$store.commit("backup/setToken", { service, value: false });
       } else {
         this.$store.commit("notification/alert", this.i18n.updateFailure);
